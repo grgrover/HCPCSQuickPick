@@ -5,13 +5,12 @@ const express = require('express');
 const partials = require('express-partials');
 const port = process.env.PORT || 3000;
 var cors = require('cors');
-const parse = require('csv-parse').parse
+const { updateDMEPOS, getLCodes, getPrices } = require('../models/model.js')
 const os = require('os')
 const multer = require('multer')
 const upload = multer({ dest: os.tmpdir() })
-const {updateDMEPOS, getLCodes} = require('../../database/etl.js')
 const fs = require('fs')
-
+const {parse} = require('csv-parse')
 
 const app = express();
 
@@ -23,31 +22,31 @@ app.use(express.urlencoded({ extended: true }));
 app.post(`/data`, upload.single('file'), (req, res) => {
   const file = req.file;
   const data = fs.readFileSync(file.path)
-  async function updateRecords() {
+  async function updateRecords(data) {
     parse(data, (err, records) => {
       if (err) {
         console.error(err)
         return res.status(400).json({ success: false, message: 'An error occurred' })
+      } else {
+        updateDMEPOS(records)
       }
-      updateDMEPOS(records)
     })
   }
-  updateRecords()
-  .then(()=>{
-    getLCodes()
-    .then((data)=>{res.send(data)})
-    .catch(err=>{res.sendStatus(500).send(err)})
-    })
-  .catch(err=>{res.sendStatus(400).send(err)})
-
+   updateRecords(data)
+//query to database to update table
+   getLCodes(res)
 
 })
 
-app.get('/data', (req, res)=>{
+app.get('/data', (req, res) => {
   getLCodes(res)
 
 })
-
+app.get('/cost', (req, res) => {
+  var codes = req.query.codes
+  var billingZone = req.query.billingZone
+  getPrices(codes, billingZone, res)
+})
 
 const server = app.listen(port, () => {
   console.log(`Q&A is listening on ${port}`);
