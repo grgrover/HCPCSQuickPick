@@ -23,18 +23,19 @@ app.post(`/data`, upload.single('file'), (req, res) => {
   const file = req.file;
   const data = fs.readFileSync(file.path)
   async function updateRecords(data) {
-    parse(data, (err, records) => {
+   parse(data, (err, records) => {
       if (err) {
         console.error(err)
         return res.status(400).json({ success: false, message: 'An error occurred' })
       } else {
-        updateDMEPOS(records)
+        updateDMEPOS(records).then(()=>{
+          //query to database to update table
+             getLCodes(res)
+        })
       }
     })
   }
-   updateRecords(data)
-//query to database to update table
-   getLCodes(res)
+  updateRecords(data)
 
 })
 
